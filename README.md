@@ -54,11 +54,3 @@ This project demonstrates the A* pathfinding algorithm in an interactive and vis
 - **C Key**: Clear the grid.
 - **Buttons**: Use the "Start" button to initiate the pathfinding and the "Reset" button to clear the grid.
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
-
-## License
-
-This project is licensed under the MIT License.
-
