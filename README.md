@@ -30,7 +30,7 @@ This project demonstrates the A* pathfinding algorithm in an interactive and vis
 
 1. **Clone the Repository**:
     ```bash
-    git clone https://github.com/yourusername/a-star-pathfinding-simulator.git
+    git clone https://github.com/RohanLambture/a-star-pathfinding-simulator.git
     cd a-star-pathfinding-simulator
     ```
 
