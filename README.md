@@ -1,7 +1,3 @@
-Sure, here's a detailed README description for your A* Path Finding Algorithm Simulator project:
-
----
-
 # A* Path Finding Algorithm Simulator
 
 An interactive simulation project that visualizes the A* pathfinding algorithm.
