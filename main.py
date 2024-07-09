@@ -1,13 +1,13 @@
+
 import pygame
-import math
 from queue import PriorityQueue
 
-
-WIDTH = 800
+WIDTH = 1000
 HEIGHT = 800
-OPTIONS_WIDTH = 200  # Adjusted width of options panel
-GRID_WIDTH = WIDTH - OPTIONS_WIDTH
-GRID_HEIGHT = HEIGHT - 100  # Adding space above and below the grid
+OPTIONS_WIDTH = 200
+GRID_SIZE = 600
+PADDING = 20
+
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("A* Path Finding Algorithm")
 
@@ -25,8 +25,8 @@ class Spot:
     def __init__(self, row, col, width, total_rows):
         self.row = row
         self.col = col
-        self.x = OPTIONS_WIDTH + (col * width)
-        self.y = 50 + (row * width)  # Adding top space
+        self.x = OPTIONS_WIDTH + PADDING + (col * width)
+        self.y = PADDING + (row * width)
         self.color = WHITE
         self.neighbors = []
         self.width = width
@@ -76,52 +76,53 @@ class Spot:
 
     def update_neighbors(self, grid):
         self.neighbors = []
-        if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier():  # DOWN
+        if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier():  
             self.neighbors.append(grid[self.row + 1][self.col])
 
-        if self.row > 0 and not grid[self.row - 1][self.col].is_barrier():  # UP
+        if self.row > 0 and not grid[self.row - 1][self.col].is_barrier():  
             self.neighbors.append(grid[self.row - 1][self.col])
 
-        if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier():  # RIGHT
+        if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier():  
             self.neighbors.append(grid[self.row][self.col + 1])
 
-        if self.col > 0 and not grid[self.row][self.col - 1].is_barrier():  # LEFT
+        if self.col > 0 and not grid[self.row][self.col - 1].is_barrier():  
             self.neighbors.append(grid[self.row][self.col - 1])
 
     def __lt__(self, other):
         return False
 
-def make_grid(rows, cols, width, height):
+def make_grid(rows, width):
     grid = []
-    gap = min(width // cols, height // rows)  
+    gap = width // rows
     for i in range(rows):
         grid.append([])
-        for j in range(cols):
+        for j in range(rows):
             spot = Spot(i, j, gap, rows)
             grid[i].append(spot)
     return grid
 
-def draw_grid(win, rows, cols, width, height):
-    gap = min(width // cols, height // rows)
-    for i in range(rows):
-        pygame.draw.line(win, GREY, (OPTIONS_WIDTH, 50 + i * gap), (OPTIONS_WIDTH + width, 50 + i * gap))
-        for j in range(cols):
-            pygame.draw.line(win, GREY, (OPTIONS_WIDTH + j * gap, 50), (OPTIONS_WIDTH + j * gap, 50 + height))
+def draw_grid(win, rows, width):
+    gap = width // rows
+    for i in range(rows + 1):
+        pygame.draw.line(win, GREY, (OPTIONS_WIDTH + PADDING, PADDING + i * gap), (OPTIONS_WIDTH + PADDING + width, PADDING + i * gap))
+        pygame.draw.line(win, GREY, (OPTIONS_WIDTH + PADDING + i * gap, PADDING), (OPTIONS_WIDTH + PADDING + i * gap, PADDING + width))
 
-def draw_options_panel(win):
-    font = pygame.font.SysFont('comicsans', 30)
+def draw_options_panel(win, selected_tool):
+    try:
+        font = pygame.font.SysFont('comicsans', 30)
+    except pygame.error:
+        font = pygame.font.Font(None, 30)  
+        
     text = font.render('Options', 1, WHITE)
     win.blit(text, (10, 10))
 
-    #button dimensions
-    button_width = 80
+    button_width = 160
     button_height = 40
     button_margin = 10
     button_color = (100, 100, 100)
     button_hover_color = (150, 150, 150)
     text_color = BLACK
 
-    # Buttons for selecting start, end, wall, and ground
     buttons = [
         {"rect": pygame.Rect(10, 60, button_width, button_height), "color": GREEN, "hover_color": (0, 255, 0), "text": "Start"},
         {"rect": pygame.Rect(10, 110, button_width, button_height), "color": RED, "hover_color": (255, 0, 0), "text": "End"},
@@ -130,15 +131,18 @@ def draw_options_panel(win):
     ]
 
     for button in buttons:
-        pygame.draw.rect(win, button["color"], button["rect"])
+        color = button["hover_color"] if button["text"].lower() == selected_tool else button["color"]
+        pygame.draw.rect(win, color, button["rect"])
         if button["rect"].collidepoint(pygame.mouse.get_pos()):
             pygame.draw.rect(win, button["hover_color"], button["rect"])
-        button_font = pygame.font.SysFont('comicsans', 20)
+        try:
+            button_font = pygame.font.SysFont('comicsans', 20)
+        except pygame.error:
+            button_font = pygame.font.Font(None, 20)  
         button_text = button_font.render(button["text"], 1, text_color)
         win.blit(button_text, (button["rect"].x + button_width // 2 - button_text.get_width() // 2,
                                button["rect"].y + button_height // 2 - button_text.get_height() // 2))
 
-    # Buttons for starting and resetting the simulation
     start_button_rect = pygame.Rect(10, HEIGHT - 100, button_width, button_height)
     reset_button_rect = pygame.Rect(10, HEIGHT - 50, button_width, button_height)
     pygame.draw.rect(win, GREEN, start_button_rect)
@@ -154,34 +158,45 @@ def draw_options_panel(win):
     win.blit(reset_text, (reset_button_rect.x + button_width // 2 - reset_text.get_width() // 2,
                           reset_button_rect.y + button_height // 2 - reset_text.get_height() // 2))
 
-def draw(win, grid, rows, cols, width, height):
+def draw(win, grid, rows, width):
     win.fill(BLACK)
-    draw_options_panel(win)
+    draw_options_panel(win, selected_tool)
 
     for row in grid:
         for spot in row:
             spot.draw(win)
 
-    draw_grid(win, rows, cols, width, height)
+    draw_grid(win, rows, width)
     pygame.display.update()
 
-def get_clicked_pos(pos, rows, cols, width, height):
-    gap = min(width // cols, height // rows)
-    y, x = pos
+def get_clicked_pos(pos, rows, width):
+    gap = width // rows
+    x, y = pos
 
-    row = (y - 50) // gap
-    col = (x - OPTIONS_WIDTH) // gap
+    row = (y - PADDING) // gap
+    col = (x - OPTIONS_WIDTH - PADDING) // gap
 
     return row, col
+
+def h(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return abs(x1 - x2) + abs(y1 - y2)
+
+def reconstruct_path(came_from, current, draw):
+    while current in came_from:
+        current = came_from[current]
+        current.make_path()
+        draw()
 
 def algorithm(draw, grid, start, end):
     count = 0
     open_set = PriorityQueue()
     open_set.put((0, count, start))
     came_from = {}
-    g_score = {spot: float('inf') for row in grid for spot in row}
+    g_score = {spot: float("inf") for row in grid for spot in row}
     g_score[start] = 0
-    f_score = {spot: float('inf') for row in grid for spot in row}
+    f_score = {spot: float("inf") for row in grid for spot in row}
     f_score[start] = h(start.get_pos(), end.get_pos())
 
     open_set_hash = {start}
@@ -219,67 +234,80 @@ def algorithm(draw, grid, start, end):
 
     return False
 
-def reconstruct_path(came_from, current, draw):
-    while current in came_from:
-        current = came_from[current]
-        current.make_path()
-        draw()
-
-def h(p1, p2):
-    x1, y1 = p1
-    x2, y2 = p2
-    return abs(x1 - x2) + abs(y1 - y2)
-
 def main(win, width, height):
-    pygame.font.init()
+    ROWS = 30
+    grid = make_grid(ROWS, GRID_SIZE)
 
-    ROWS = 20
-    COLS = 20
-    grid = make_grid(ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
     start = None
     end = None
     run = True
+    started = False
 
-    selected_tool = None  
+    global selected_tool
+    selected_tool = None
 
     while run:
-        draw(win, grid, ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
-
+        draw(win, grid, ROWS, GRID_SIZE)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
 
-            if pygame.mouse.get_pressed()[0]:  # LEFT
+            if started:
+                continue
+
+            if pygame.mouse.get_pressed()[0]:  
                 pos = pygame.mouse.get_pos()
                 if pos[0] < OPTIONS_WIDTH:
-                    if 60 <= pos[1] <= 100:
+                    if 60 <= pos[1] < 100:
                         selected_tool = "start"
-                    elif 110 <= pos[1] <= 150:
+                    elif 110 <= pos[1] < 150:
                         selected_tool = "end"
-                    elif 160 <= pos[1] <= 200:
+                    elif 160 <= pos[1] < 200:
                         selected_tool = "wall"
-                    elif 210 <= pos[1] <= 250:
+                    elif 210 <= pos[1] < 250:
                         selected_tool = "ground"
+                    elif HEIGHT - 100 <= pos[1] < HEIGHT - 60:  
+                        if start and end:
+                            for row in grid:
+                                for spot in row:
+                                    spot.update_neighbors(grid)
+                            started = True
+                            algorithm(lambda: draw(win, grid, ROWS, GRID_SIZE), grid, start, end)
+                            started = False
+                    elif HEIGHT - 50 <= pos[1] < HEIGHT - 10:  
+                        start = None
+                        end = None
+                        grid = make_grid(ROWS, GRID_SIZE)
+                        selected_tool = None
+                        started = False
                 else:
-                    row, col = get_clicked_pos(pos, ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
-                    if row < ROWS and col < COLS:
+                    row, col = get_clicked_pos(pos, ROWS, GRID_SIZE)
+                    if 0 <= row < ROWS and 0 <= col < ROWS:
                         spot = grid[row][col]
-                        if selected_tool == "start" and not start and spot != end:
+                        if selected_tool == "start":
+                            if start:
+                                start.reset()
                             start = spot
                             start.make_start()
-                        elif selected_tool == "end" and not end and spot != start:
+                        elif selected_tool == "end":
+                            if end:
+                                end.reset()
                             end = spot
                             end.make_end()
-                        elif selected_tool == "wall" and spot != start and spot != end:
+                        elif selected_tool == "wall":
                             spot.make_barrier()
                         elif selected_tool == "ground":
                             spot.reset()
+                            if spot == start:
+                                start = None
+                            elif spot == end:
+                                end = None
 
-            elif pygame.mouse.get_pressed()[2]:  # RIGHT
+            elif pygame.mouse.get_pressed()[2]:  
                 pos = pygame.mouse.get_pos()
                 if pos[0] > OPTIONS_WIDTH:
-                    row, col = get_clicked_pos(pos, ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
-                    if row < ROWS and col < COLS:
+                    row, col = get_clicked_pos(pos, ROWS, GRID_SIZE)
+                    if 0 <= row < ROWS and 0 <= col < ROWS:
                         spot = grid[row][col]
                         spot.reset()
                         if spot == start:
@@ -292,26 +320,17 @@ def main(win, width, height):
                     for row in grid:
                         for spot in row:
                             spot.update_neighbors(grid)
-                    algorithm(lambda: draw(win, grid, ROWS, COLS, GRID_WIDTH, GRID_HEIGHT), grid, start, end)
+                    started = True
+                    algorithm(lambda: draw(win, grid, ROWS, GRID_SIZE), grid, start, end)
+                    started = False
 
                 if event.key == pygame.K_c:
                     start = None
                     end = None
-                    grid = make_grid(ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if 10 <= event.pos[0] <= 90 and HEIGHT - 100 <= event.pos[1] <= HEIGHT - 60:
-                    if start and end:
-                        for row in grid:
-                            for spot in row:
-                                spot.update_neighbors(grid)
-                        algorithm(lambda: draw(win, grid, ROWS, COLS, GRID_WIDTH, GRID_HEIGHT), grid, start, end)
-                elif 10 <= event.pos[0] <= 90 and HEIGHT - 50 <= event.pos[1] <= HEIGHT - 10:
-                    start = None
-                    end = None
-                    grid = make_grid(ROWS, COLS, GRID_WIDTH, GRID_HEIGHT)
+                    grid = make_grid(ROWS, GRID_SIZE)
+                    selected_tool = None
 
     pygame.quit()
 
-if __name__ == "__main__":
-    main(WIN, WIDTH, HEIGHT)
+pygame.font.init()
+main(WIN, WIDTH, HEIGHT)
